@@ -1,0 +1,253 @@
+import React, { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  Home, Compass, Target, Users, Wallet, MessageSquare,
+  Trophy, Settings, LogOut, Bell, Plus, Search, ChevronRight
+} from 'lucide-react';
+import { selectUser } from '../../store/slices/authSlice';
+import { logout } from '../../store/slices/authSlice';
+import { selectBalance } from '../../store/slices/walletSlice';
+import Avatar from '../Common/Avatar';
+import NotificationPanel from '../Common/NotificationPanel';
+import CreatePostModal from '../Feed/CreatePostModal';
+import CreateBetModal from '../Betting/CreateBetModal';
+
+export default function AppLayout() {
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+  const user      = useSelector(selectUser);
+  const balance   = useSelector(selectBalance);
+  const [showNotifs, setShowNotifs]     = useState(false);
+  const [showCreatePost, setCreatePost] = useState(false);
+  const [showCreateBet, setCreateBet]   = useState(false);
+  const [searchQuery, setSearch]        = useState('');
+
+  const navItems = [
+    { to: '/',            icon: Home,          label: 'Feed' },
+    { to: '/explore',     icon: Compass,       label: 'Explore' },
+    { to: '/betting',     icon: Target,        label: 'Bets' },
+    { to: '/rooms',       icon: Users,         label: 'Rooms' },
+    { to: '/leaderboard', icon: Trophy,        label: 'Rankings' },
+    { to: '/messages',    icon: MessageSquare, label: 'Messages' },
+    { to: '/wallet',      icon: Wallet,        label: 'Wallet' },
+    { to: '/settings',    icon: Settings,      label: 'Settings' },
+  ];
+
+  const handleLogout = () => { dispatch(logout()); navigate('/login'); };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+
+      {/* ── Left Sidebar ─────────────────────────────────────────────── */}
+      <aside style={{
+        width: '260px', minHeight: '100vh', background: 'var(--bg-card)',
+        borderRight: '1px solid var(--border)', display: 'flex',
+        flexDirection: 'column', position: 'sticky', top: 0,
+        padding: '0 0 20px', zIndex: 50, flexShrink: 0
+      }} className="hidden-mobile">
+
+        {/* Logo */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div className="logo-text" style={{ fontSize: 26 }}>
+            <span className="logo-red">50</span>
+            <span className="logo-slash">/</span>
+            <span className="logo-blue">50</span>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 400, fontSize: 16, marginLeft: 6 }}>Life</span>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, letterSpacing: '0.08em' }}>
+            WHERE EVERY BET IS 50/50
+          </div>
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '14px 16px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              className="form-input"
+              style={{ paddingLeft: 32, fontSize: 13, height: 36 }}
+              placeholder="Search users, bets, events…"
+              value={searchQuery}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '0 10px' }}>
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to} end={to === '/'}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 14px', borderRadius: 'var(--radius)',
+                marginBottom: 2, fontSize: 14, fontWeight: 600,
+                color:      isActive ? 'white' : 'var(--text-secondary)',
+                background: isActive ? 'linear-gradient(135deg,var(--red),var(--blue))' : 'transparent',
+                textDecoration: 'none', transition: 'all 0.15s'
+              })}>
+              <Icon size={18} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Quick actions */}
+        <div style={{ padding: '10px 14px', display: 'flex', gap: 8 }}>
+          <button className="btn btn-red btn-sm" style={{ flex: 1 }} onClick={() => setCreateBet(true)}>
+            <Plus size={14} /> New Bet
+          </button>
+          <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setCreatePost(true)}>
+            <Plus size={14} /> Post
+          </button>
+        </div>
+
+        {/* User profile strip */}
+        <div style={{
+          margin: '10px 14px 0', padding: '12px', borderRadius: 'var(--radius)',
+          background: 'var(--bg-hover)', border: '1px solid var(--border)', cursor: 'pointer'
+        }} onClick={() => navigate(`/profile/${user?.username}`)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Avatar user={user} size={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                @{user?.username}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                Balance: <span style={{ color: 'var(--green)', fontWeight: 700 }}>${parseFloat(balance || 0).toFixed(2)}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={e => { e.stopPropagation(); setShowNotifs(v => !v); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <Bell size={16} />
+              </button>
+              <button onClick={e => { e.stopPropagation(); handleLogout(); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <LogOut size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showNotifs && <NotificationPanel onClose={() => setShowNotifs(false)} />}
+      </aside>
+
+      {/* ── Main Content ─────────────────────────────────────────────── */}
+      <main style={{ flex: 1, minWidth: 0, maxWidth: '680px', margin: '0 auto' }}>
+        <Outlet />
+      </main>
+
+      {/* ── Right Sidebar ─────────────────────────────────────────────── */}
+      <aside style={{
+        width: '300px', minHeight: '100vh', flexShrink: 0,
+        padding: '20px 16px', position: 'sticky', top: 0, alignSelf: 'flex-start'
+      }} className="hidden-mobile">
+        <RightSidebar />
+      </aside>
+
+      {/* ── Mobile Bottom Nav ─────────────────────────────────────────── */}
+      <nav className="mobile-nav">
+        {[
+          { to: '/', icon: Home, label: 'Feed' },
+          { to: '/explore', icon: Compass, label: 'Explore' },
+        ].map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === '/'}>
+            {({ isActive }) => (
+              <button className={`mobile-nav-item ${isActive ? 'active' : ''}`}>
+                <Icon size={20} />
+                {label}
+              </button>
+            )}
+          </NavLink>
+        ))}
+        <button className="mobile-nav-item bet-btn" onClick={() => setCreateBet(true)}>+</button>
+        {[
+          { to: '/rooms', icon: Users, label: 'Rooms' },
+          { to: '/wallet', icon: Wallet, label: 'Wallet' },
+        ].map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to}>
+            {({ isActive }) => (
+              <button className={`mobile-nav-item ${isActive ? 'active' : ''}`}>
+                <Icon size={20} />
+                {label}
+              </button>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      {showCreatePost && <CreatePostModal onClose={() => setCreatePost(false)} />}
+      {showCreateBet  && <CreateBetModal  onClose={() => setCreateBet(false)} />}
+    </div>
+  );
+}
+
+// ── Right sidebar widgets ────────────────────────────────────────────────────
+function RightSidebar() {
+  const navigate = useNavigate();
+  const trendingBets = [
+    { sport: '⚽', event: 'Man City vs Arsenal', market: 'Match Winner', odds: '2.10' },
+    { sport: '🏀', event: 'Lakers vs Warriors', market: 'Over 224.5', odds: '1.90' },
+    { sport: '🎮', event: 'NaVi vs Astralis', market: 'Match Winner', odds: '1.75' },
+    { sport: '🏏', event: 'India vs England', market: 'Series Winner', odds: '1.55' },
+  ];
+  const trendingTags = ['#PremierLeague','#NBA','#Esports','#UFC','#5050Life','#Cricket'];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Live bets widget */}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontFamily: 'var(--font-cond)', fontWeight: 900, fontSize: 15 }}>🔥 HOT BETS</span>
+          <button onClick={() => navigate('/betting')}
+            style={{ background: 'none', border: 'none', color: 'var(--blue-light)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
+            All <ChevronRight size={12} />
+          </button>
+        </div>
+        {trendingBets.map((b, i) => (
+          <div key={i} onClick={() => navigate('/betting')} style={{
+            padding: '8px 0', borderBottom: i < trendingBets.length - 1 ? '1px solid var(--border)' : 'none',
+            cursor: 'pointer'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{b.sport} {b.event}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{b.market}</div>
+              </div>
+              <span className="odds-display" style={{ fontSize: 16 }}>{b.odds}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Trending tags */}
+      <div className="card">
+        <div style={{ fontFamily: 'var(--font-cond)', fontWeight: 900, fontSize: 15, marginBottom: 12 }}>📈 TRENDING</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {trendingTags.map(tag => (
+            <button key={tag} style={{
+              background: 'var(--bg-hover)', border: '1px solid var(--border)',
+              borderRadius: 20, padding: '4px 10px', fontSize: 12,
+              color: 'var(--blue-light)', cursor: 'pointer', fontWeight: 600
+            }}>{tag}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Commission notice */}
+      <div style={{
+        background: 'linear-gradient(135deg,var(--red-muted),var(--blue-muted))',
+        border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14
+      }}>
+        <div style={{ fontFamily: 'var(--font-cond)', fontWeight: 900, fontSize: 13, marginBottom: 4 }}>
+          💰 50/50 LIFE COMMISSION
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          10% of every winning payout goes to the platform. Displayed odds reflect gross payout before commission.
+        </div>
+      </div>
+    </div>
+  );
+}
