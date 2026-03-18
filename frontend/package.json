@@ -1,7 +1,6 @@
 {
   "name": "5050life-frontend",
   "version": "1.0.0",
-  "description": "50/50 Life — Social P2P Betting Platform Frontend",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
@@ -12,28 +11,33 @@
     "react-redux": "^9.0.4",
     "axios": "^1.6.2",
     "socket.io-client": "^4.6.2",
-    "@stripe/stripe-js": "^2.2.2",
-    "@stripe/react-stripe-js": "^2.4.0",
-    "recharts": "^2.10.1",
     "react-hot-toast": "^2.4.1",
-    "react-infinite-scroll-component": "^6.1.0",
-    "react-dropzone": "^14.2.3",
     "date-fns": "^3.0.6",
-    "framer-motion": "^10.16.16",
-    "lucide-react": "^0.303.0",
-    "clsx": "^2.0.0",
-    "react-hook-form": "^7.49.2",
-    "zod": "^3.22.4",
-    "@hookform/resolvers": "^3.3.2"
+    "lucide-react": "^0.303.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test":  "react-scripts test"
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
-  "proxy": "http://localhost:5000",
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   }
 }
