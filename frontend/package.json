@@ -3,17 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
+    "axios": "^1.6.2",
+    "date-fns": "^3.0.6",
+    "lucide-react": "^0.303.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-redux": "^9.0.4",
     "react-router-dom": "^6.20.1",
     "react-scripts": "5.0.1",
-    "@reduxjs/toolkit": "^2.0.1",
-    "react-redux": "^9.0.4",
-    "axios": "^1.6.2",
-    "socket.io-client": "^4.6.2",
-    "react-hot-toast": "^2.4.1",
-    "date-fns": "^3.0.6",
-    "lucide-react": "^0.303.0"
+    "socket.io-client": "^4.6.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -37,7 +37,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
-}    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   }
 }
