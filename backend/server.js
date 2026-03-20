@@ -54,10 +54,11 @@ app.use(helmet({
 }));
 
 app.use(cors({
+app.use(cors({
   origin: [
-    process.env.FRONTEND_URL,
+    'https://5050life.vercel.app',
     'http://localhost:3000',
-    'https://app.5050life.com'
+    process.env.FRONTEND_URL
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
