@@ -1,155 +1,120 @@
-/**
- * 50/50 Life — Main Server Entry Point
- * ─────────────────────────────────────
- * Social P2P Betting Platform
- */
-
 require('dotenv').config();
-const express      = require('express');
-const http         = require('http');
-const cors         = require('cors');
-const helmet       = require('helmet');
-const morgan       = require('morgan');
-const compression  = require('compression');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp          = require('hpp');
 
-const { connectPostgres } = require('./config/database');
-const { connectMongo }    = require('./config/mongo');
-const { connectRedis }    = require('./config/redis');
-const { initSocket }      = require('./sockets/socketHandler');
-const { startCronJobs }   = require('./services/cronService');
-const logger              = require('./config/logger');
+var express = require('express');
+var http = require('http');
+var cors = require('cors');
+var helmet = require('helmet');
+var morgan = require('morgan');
 
-// ── Route imports ──────────────────────────────────────────────────────────
-const authRoutes      = require('./routes/auth');
-const userRoutes      = require('./routes/users');
-const betRoutes       = require('./routes/bets');
-const walletRoutes    = require('./routes/wallet');
-const socialRoutes    = require('./routes/social');
-const roomRoutes      = require('./routes/rooms');
-const sportsRoutes    = require('./routes/sports');
-const adminRoutes     = require('./routes/admin');
-const notifRoutes     = require('./routes/notifications');
-const webhookRoutes   = require('./routes/webhooks');
-const gameRoutes      = require('./routes/games');
+var connectPostgres = require('./config/database').connectPostgres;
+var connectMongo = require('./config/mongo').connectMongo;
+var connectRedis = require('./config/redis').connectRedis;
+var logger = require('./config/logger');
 
-// ── Middleware imports ─────────────────────────────────────────────────────
-const { errorHandler }   = require('./middleware/errorHandler');
-const { rateLimiter }    = require('./middleware/rateLimiter');
+var authRoutes    = require('./routes/auth');
+var userRoutes    = require('./routes/users');
+var betRoutes     = require('./routes/bets');
+var walletRoutes  = require('./routes/wallet');
+var socialRoutes  = require('./routes/social');
+var roomRoutes    = require('./routes/rooms');
+var sportsRoutes  = require('./routes/sports');
+var adminRoutes   = require('./routes/admin');
+var notifRoutes   = require('./routes/notifications');
+var webhookRoutes = require('./routes/webhooks');
+var gameRoutes    = require('./routes/games');
 
-const app    = express();
-const server = http.createServer(app);
+var app    = express();
+var server = http.createServer(app);
 
-// ── Security middleware ────────────────────────────────────────────────────
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"],
-      styleSrc:   ["'self'", "'unsafe-inline'"],
-      imgSrc:     ["'self'", 'data:', 'https:'],
+var allowedOrigins = [
+  'https://5050life.vercel.app',
+  'http://localhost:3000'
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
-  }
-}));
-
-app.use(cors({
-app.use(cors({
-  origin: [
-    'https://5050life.vercel.app',
-    'http://localhost:3000',
-    process.env.FRONTEND_URL
-  ],
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Refresh-Token']
 }));
 
-// ── General middleware ─────────────────────────────────────────────────────
-app.use(compression());
-app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
-// Raw body for Stripe webhooks (must be before express.json())
+app.use(morgan('combined'));
+
 app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
-
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(mongoSanitize());
-app.use(hpp());
-app.use(rateLimiter);
+app.use(express.urlencoded({ extended: true }));
 
-// ── Health check ───────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
+app.get('/health', function(req, res) {
   res.json({
     status: 'ok',
     platform: '50/50 Life',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// ── API routes ─────────────────────────────────────────────────────────────
-const API = '/api/v1';
-app.use(`${API}/auth`,          authRoutes);
-app.use(`${API}/users`,         userRoutes);
-app.use(`${API}/bets`,          betRoutes);
-app.use(`${API}/wallet`,        walletRoutes);
-app.use(`${API}/social`,        socialRoutes);
-app.use(`${API}/rooms`,         roomRoutes);
-app.use(`${API}/sports`,        sportsRoutes);
-app.use(`${API}/admin`,         adminRoutes);
-app.use(`${API}/notifications`, notifRoutes);
+var API = '/api/v1';
+app.use(API + '/auth',          authRoutes);
+app.use(API + '/users',         userRoutes);
+app.use(API + '/bets',          betRoutes);
+app.use(API + '/wallet',        walletRoutes);
+app.use(API + '/social',        socialRoutes);
+app.use(API + '/rooms',         roomRoutes);
+app.use(API + '/sports',        sportsRoutes);
+app.use(API + '/admin',         adminRoutes);
+app.use(API + '/notifications', notifRoutes);
+app.use(API + '/games',         gameRoutes);
 app.use('/api/webhooks',        webhookRoutes);
-app.use(`${API}/games`,          gameRoutes);
 
-// ── 404 handler ────────────────────────────────────────────────────────────
-app.use('*', (req, res) => {
+app.use('*', function(req, res) {
   res.status(404).json({
     success: false,
-    message: `Route ${req.originalUrl} not found on 50/50 Life API`
+    message: 'Route not found'
   });
 });
 
-// ── Global error handler ───────────────────────────────────────────────────
-app.use(errorHandler);
+app.use(function(err, req, res, next) {
+  logger.error(err.message || 'Unknown error');
+  var status = err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || 'Something went wrong'
+  });
+});
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────
 async function bootstrap() {
   try {
     await connectPostgres();
     await connectMongo();
     await connectRedis();
 
-    initSocket(server);
-    startCronJobs();
-
-    const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
-      logger.info(`🎯 50/50 Life API running on port ${PORT} [${process.env.NODE_ENV}]`);
-      logger.info(`📡 WebSocket server ready`);
-      logger.info(`💰 Commission rate: ${(process.env.PLATFORM_COMMISSION_RATE * 100)}% on all bets`);
+    var PORT = process.env.PORT || 5000;
+    server.listen(PORT, function() {
+      logger.info('50/50 Life API running on port ' + PORT);
+      logger.info('Environment: ' + (process.env.NODE_ENV || 'development'));
+      logger.info('Frontend URL: ' + (process.env.FRONTEND_URL || 'not set'));
     });
   } catch (err) {
-    logger.error('Failed to start server:', err);
+    logger.error('Failed to start: ' + err.message);
     process.exit(1);
   }
 }
 
 bootstrap();
 
-// ── Graceful shutdown ──────────────────────────────────────────────────────
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received — shutting down gracefully');
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-module.exports = { app, server };
-  
+module.exports = { app: app, server: server };
