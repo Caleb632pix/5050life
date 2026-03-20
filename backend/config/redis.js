@@ -1,45 +1,57 @@
-/**
- * Redis Connection
- */
-const { createClient } = require('redis');
-const logger           = require('./logger');
+const logger = require('./logger');
 
-let redisClient;
+let redisClient = null;
 
 async function connectRedis() {
-  redisClient = createClient({
-    socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379
-    },
-    password: process.env.REDIS_PASSWORD || undefined
-  });
-
-  redisClient.on('error', err => logger.error('Redis error:', err));
-  redisClient.on('reconnecting', () => logger.warn('Redis reconnecting...'));
-
-  await redisClient.connect();
-  logger.info('✅ Redis connected');
+  if (process.env.SKIP_REDIS === 'true') {
+    logger.info('Redis skipped — running without cache');
+    return;
+  }
+  try {
+    const { createClient } = require('redis');
+    redisClient = createClient({
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379
+      },
+      password: process.env.REDIS_PASSWORD || undefined
+    });
+    redisClient.on('error', err => logger.warn('Redis error:', err.message));
+    await redisClient.connect();
+    logger.info('Redis connected');
+  } catch (err) {
+    logger.warn('Redis not available — running without cache');
+    redisClient = null;
+  }
 }
 
-function getRedis() {
-  if (!redisClient) throw new Error('Redis not connected');
-  return redisClient;
+function getRedis() { return redisClient; }
+
+async function setCache(key, value, ttl) {
+  try {
+    if (redisClient) await redisClient.setEx(key, ttl || 300, JSON.stringify(value));
+  } catch (e) {}
 }
 
-// Helpers
-async function setCache(key, value, ttlSeconds = 300) {
-  await getRedis().setEx(key, ttlSeconds, JSON.stringify(value));
-}
 async function getCache(key) {
-  const data = await getRedis().get(key);
-  return data ? JSON.parse(data) : null;
+  try {
+    if (!redisClient) return null;
+    const data = await redisClient.get(key);
+    return data ? JSON.parse(data) : null;
+  } catch (e) { return null; }
 }
+
 async function delCache(key) {
-  await getRedis().del(key);
+  try {
+    if (redisClient) await redisClient.del(key);
+  } catch (e) {}
 }
+
 async function incrCounter(key) {
-  return getRedis().incr(key);
+  try {
+    if (redisClient) return await redisClient.incr(key);
+    return 0;
+  } catch (e) { return 0; }
 }
 
 module.exports = { connectRedis, getRedis, setCache, getCache, delCache, incrCounter };
