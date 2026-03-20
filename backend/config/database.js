@@ -1,39 +1,61 @@
-/**
- * PostgreSQL — Sequelize Connection
- */
 const { Sequelize } = require('sequelize');
-const logger        = require('./logger');
+const logger = require('./logger');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host:    process.env.DB_HOST || 'localhost',
-    port:    process.env.DB_PORT || 5432,
+let sequelize;
+
+if (process.env.DATABASE_URL) {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development'
-      ? (sql) => logger.debug(sql)
-      : false,
-    pool: {
-      max:     10,
-      min:     2,
-      acquire: 30000,
-      idle:    10000
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
     },
-    dialectOptions: process.env.DB_SSL === 'true' ? {
-      ssl: { require: true, rejectUnauthorized: false }
-    } : {}
-  }
-);
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    }
+  });
+} else {
+  sequelize = new Sequelize(
+    process.env.DB_NAME || 'fiftyfiftylife',
+    process.env.DB_USER || 'postgres',
+    process.env.DB_PASSWORD || '',
+    {
+      host:    process.env.DB_HOST || 'localhost',
+      port:    process.env.DB_PORT || 5432,
+      dialect: 'postgres',
+      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
+    }
+  );
+}
 
 async function connectPostgres() {
-  await sequelize.authenticate();
-  // Sync models (use migrations in production)
-  if (process.env.NODE_ENV === 'development') {
-    await sequelize.sync({ alter: true });
+  try {
+    await sequelize.authenticate();
+    logger.info('PostgreSQL connected');
+    if (process.env.NODE_ENV !== 'production') {
+      await sequelize.sync({ alter: true });
+    } else {
+      await sequelize.sync();
+    }
+    logger.info('Database tables ready');
+  } catch (err) {
+    logger.error('PostgreSQL connection failed:', err.message);
+    throw err;
   }
-  logger.info('✅ PostgreSQL connected');
 }
+
+module.exports = { sequelize, connectPostgres };}
 
 module.exports = { sequelize, connectPostgres };
