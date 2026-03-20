@@ -1,7 +1,7 @@
-const { Sequelize } = require('sequelize');
-const logger = require('./logger');
+var Sequelize = require('sequelize').Sequelize;
+var logger = require('./logger');
 
-let sequelize;
+var sequelize;
 
 if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
@@ -26,8 +26,8 @@ if (process.env.DATABASE_URL) {
     process.env.DB_USER || 'postgres',
     process.env.DB_PASSWORD || '',
     {
-      host:    process.env.DB_HOST || 'localhost',
-      port:    process.env.DB_PORT || 5432,
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
       dialect: 'postgres',
       logging: false,
       pool: {
@@ -44,18 +44,12 @@ async function connectPostgres() {
   try {
     await sequelize.authenticate();
     logger.info('PostgreSQL connected');
-    if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync({ alter: true });
-    } else {
-      await sequelize.sync();
-    }
+    await sequelize.sync();
     logger.info('Database tables ready');
   } catch (err) {
-    logger.error('PostgreSQL connection failed:', err.message);
+    logger.error('PostgreSQL connection failed: ' + err.message);
     throw err;
   }
 }
 
-module.exports = { sequelize, connectPostgres };}
-
-module.exports = { sequelize, connectPostgres };
+module.exports = { sequelize: sequelize, connectPostgres: connectPostgres };
